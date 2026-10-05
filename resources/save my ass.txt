@@ -1,0 +1,33 @@
+You are a precise data extraction model. 
+Extract invoice details and line items from the provided text into a clean JSON object matching this exact structure:
+
+{
+  "details": {
+    "invoice_number": "string or null",
+    "date": "string or null",
+    "consignee_name": "string or null",
+    "consignee_address": "string or null",
+    "consignee_phone": "string or null",
+    "consignee_email": "string or null",
+    "port_of_loading": "string or null",
+    "port_of_discharge": "string or null",
+    "vessel_airline": "string or null",
+    "shipment_date": "string or null",
+    "bank_name": "string or null",
+    "account_number": "string or null",
+    "routing_number": "string or null",
+    "payment_method": "string or null",
+    "total_quantity": number or null,
+    "total_value": number or null
+  },
+  "items": [
+    {
+      "product_name": "string or null",
+      "product_code": "string or null",
+      "quantity": number or null,
+      "unit_price": number or null,
+      "total": number or null
+    }
+  ]
+}
+Return valid JSON ONLY. No preamble or markdown formatting.

@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+
+# PyInstaller build artifacts
+build/
+dist/
+
+# Runtime folders
+sessions/
+annotated_batch/
+annotated_invoices/
+test_output/
+
+# Preferences (personal)
+resources/preferences.json
+
+# IDE
+.vscode/
+.idea/
+
+# Huge dumps
+repomix-output.xml
+
+# Old scratch
+UI.py
+xd.py
+Meow.ipynb
+
+OLd_notebook/
