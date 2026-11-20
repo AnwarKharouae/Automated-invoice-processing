@@ -1,120 +1,211 @@
-# Automated-invoice-processing
+# Automated Invoice Processing
 
-A 100% local, desktop invoice extraction and review application built with PySide6 and powered by a three-model AI pipeline. Process invoices locally at zero cost per invoice (~20 seconds per invoice), verify extractions in an interactive review UI with visual flags and edit tracking, and export formatted multi-sheet Excel workbooks.
+A 100% local desktop app that extracts data from invoices with a three-model AI pipeline, lets a human verify every value against the source document, and exports an audit-ready Excel workbook.
+
+Built with Python and PySide6. No invoice data ever leaves your machine.
+
+<!-- TODO: add a screenshot or short GIF of the review screen (bounding boxes + pink/green flags). Use a fake or blurred invoice, never real company data. Put it here, directly under the intro. -->
+![Review screen](docs/images/review-screen.png)
+
+---
+
+## Why I built it
+
+<!-- TODO: 2-3 sentences in your own words. What problem did you notice during your internship (without naming the company or sharing confidential details)? Example structure: "Reviewing supplier invoices was done by hand, which is slow and error-prone. I wanted to see whether a local AI pipeline could do the extraction while a human keeps control of the final numbers." -->
 
 ---
 
 ## Highlights
 
-- **100% Local & Zero Cost per Invoice** — Runs completely on your machine with no external API fees.
-- **Three-Model Pipeline** — Combines DeepSeek-OCR, Llama 3.2, and PaddleOCR-VL with automatic VRAM management for 8 GB GPUs.
-- **Human-in-the-Loop Review** — Visual bounding-box verification, pink flags for unlocated values, and green edit tracking.
-- **6-Sheet Excel Export** — Color-coded, formatted workbooks with audit trails and review tabs.
-- **Portable Sessions** — Save and reload full review states, schemas, and annotated images as self-contained ZIP files.
-- **Standalone Windows EXE** — Portable Onedir build (~250 MB) that launches in under 1 second with no Python installation required.
+- **100% local, no API fees.** Runs entirely on your machine, so invoice data stays private.
+- **Human-in-the-loop review.** Every extracted value is mapped back to the invoice image with bounding boxes. Pink flags mark values the AI could not locate. Green marks show values you edited.
+- **Audit trail.** Manual edits are logged and exported to Excel (6 sheets, including "Needs Review" and "Changes").
+- **Built for modest hardware.** Automatic model swapping keeps the pipeline within 8 GB of VRAM, at about 20 seconds per invoice (see [Performance](#performance)).
+- **Crash isolation.** One failed invoice does not stop the batch.
+- **Portable.** Standalone Windows build (no Python needed) and self-contained session files you can save and reload.
 
 ---
 
-## Getting Started
+## How it works
 
-### Option 1: Standalone Windows EXE
-1. Download/copy the portable application folder anywhere on your Windows machine (no Python installation required).
-2. Ensure **Ollama** is installed and running in the background (the app checks for Ollama on startup).
-3. Launch the executable. Editable resources—including the schema, sounds, and GIFs—live directly next to the `.exe`.
+```mermaid
+flowchart LR
+    A[Invoice image / PDF] --> B[Preprocess]
+    B --> C[DeepSeek-OCR<br/>reads the document]
+    C --> D[Llama 3.2<br/>structures the fields]
+    D --> E[PaddleOCR-VL<br/>locates each value]
+    E --> F[Annotated image<br/>+ editable tables]
+    F --> G{Human review}
+    G --> H[Approved batch]
+    H --> I[6-sheet Excel workpaper]
+```
 
-### Option 2: Running from Source
-1. Ensure **Ollama** is installed and running, with the pipeline models available (**DeepSeek-OCR**, **Llama 3.2**, and **PaddleOCR-VL**).
-2. Install the Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run the application from your local repository.
+1. **DeepSeek-OCR** reads the document.
+2. **Llama 3.2** turns the text into structured fields using an editable schema.
+3. **PaddleOCR-VL** finds where each value sits on the page, so values can be matched to the correct row.
+4. The app draws **yellow boxes** (invoice details) and **green boxes** (line items) on the image.
+5. You review, edit and approve each invoice, then export.
+
+Models are loaded and unloaded automatically so that the pipeline fits in 8 GB of VRAM.
 
 ---
 
-## Features
+## Getting started
 
-### Core Extraction
-- **Three-model pipeline** — DeepSeek-OCR reads the document, Llama 3.2 structures the extracted fields, and PaddleOCR-VL spots value locations.
-- **Row-anchored value location** — Matches each extracted value to the correct row on the invoice.
-- **Annotated output image** — Draws yellow bounding boxes for invoice details and green bounding boxes for line items.
-- **Fuzzy matching** — Survives OCR typos and formatting variations.
-- **Numeric cleaning** — Automatically strips `$`, `,`, and `USD`.
+### Requirements
 
-### Model Lifecycle & VRAM Management
-- **Automatic model swapping** — Unloads Llama + Paddle before loading DeepSeek, and vice versa.
-- **VRAM-aware** — Designed specifically for 8 GB GPUs to prevent out-of-memory (OOM) crashes.
-- **Startup preloading** — DeepSeek preloads at startup so it is ready as soon as you click **Process**.
-- **Warm between batches** — DeepSeek reloads automatically after each batch so subsequent batches in the same session start instantly without extra loading overhead.
+- [Ollama](https://ollama.com) installed and running
+- A GPU with 8 GB of VRAM
+- Windows (tested on: <!-- TODO: Windows version -->)
 
-### Review Interface
-- **Zoomable image viewer** — Smooth mouse-wheel zoom, `Ctrl+0` to fit to view, and a gray workspace background.
-- **Editable mini-Excel tables** — Double-click cells to edit, and add or remove rows and columns directly.
-- **Per-invoice review** — Click any invoice in the sidebar to load its annotated image and extracted tables.
-- **Pink flags** — Highlights values the AI could not locate on the invoice image.
-- **Green flags** — Highlights values you manually edited, maintaining a visible audit trail inside the app.
-- **Per-invoice Undo / Redo** — `Ctrl+Z` / `Ctrl+Y` undo/redo stacks that persist even when switching between invoices.
-- **Sidebar status icons** — Track progress at a glance:
-  - `☐` New
-  - `✏️` Edited
-  - `❓` Empty
-  - `⚠` Failed
-  - `✓` Approved
-- **Right-click context menu** — Quickly approve, remove, or add new invoices from the sidebar.
-- **Individual approval** — Approve invoices one by one before exporting the batch.
+### Option 1: Standalone Windows build
 
-### Batch Workflow
-- **Add invoices mid-session** — Only newly added files are processed; existing edits are preserved.
-- **Remove invoices** — Remove individual invoices from the list without affecting the rest of the batch.
-- **Skip already-processed files** — Clicking **Process** multiple times only processes new files.
-- **Empty extraction detection** — Automatically flags blank pages and failed extractions.
-- **Manual fallback** — Every invoice receives an editable table even if AI extraction produces no output.
+1. Download the portable folder and place it anywhere on your machine. No Python installation is needed.
+2. Make sure Ollama is running (the app checks on startup).
+3. Launch the `.exe`. The schema, sounds and GIFs sit next to it and can be edited.
 
-### Loading Experience & Audio
-- **Animated progress overlay** — Full-screen dark overlay during processing with phase labels showing the exact running step.
-- **Weighted progress bar** — Reflects actual time spent per phase.
-- **Per-phase character GIFs** — Custom visuals for preprocess, OCR, structure, spotting, drawing, and done states (with automatic emoji fallbacks if a GIF is missing).
-- **Audio cues (replay-safe)**:
-  - *Tuturu* on startup when DeepSeek is ready.
-  - *FAAAAAAAAAH* when a batch finishes processing.
-  - Ready chime when DeepSeek reloads after a batch.
+### Option 2: Run from source
 
-### Save & Session Management
-- **Save / Save As / Overwrite Save** — Standard file saving behavior, including silent overwrites of the active session.
-- **Portable session ZIPs** — Bundles the review state, schema, and annotated images into a single portable archive.
-- **Load session** — Restore an entire review session in a fresh launch of the app.
-- **Timestamped & versioned filenames** — Suggested filenames include the date/time and built-in versioning for an audit trail.
-- **Optional session cleanup on export** — User-confirmed cleanup prompt upon exporting.
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
 
-### Excel Export
-Exports a formatted 6-sheet Excel workbook per batch:
-1. **All Invoices** — Color-coded blocks (one per invoice) with details and line items stacked.
-2. **Items** — Flat table with one row per line item, color-coded by source invoice.
-3. **Details** — Wide-format flat table with one row per invoice.
-4. **Needs Review** — Lists invoices with unresolved pink flags alongside the specific flagged cells.
-5. **Changes** — Audit trail of manual user edits, with edited cells highlighted in green.
-6. **Failed / Manual** — Logs crashed or empty extractions for accountability.
+# 2. Pull the models
+# TODO: replace with the exact commands/model names you use, e.g.
+# ollama pull <deepseek-ocr model name>
+# ollama pull llama3.2
+# ollama pull <paddleocr-vl model name>
 
-**Export Styling:**
-- Preserves pink fills for unresolved flags and green fills for user-edited values.
-- Assigns distinct pastel colors per invoice (ensuring adjacent invoices differ).
-- Applies red headers for pink-flagged invoices and orange headers for empty extractions.
-- Adds borders to every cell, plus frozen header rows and autofilters on flat sheets.
+# 3. Run the app
+# TODO: exact command, e.g. python main.py
+```
 
-### Preferences & Interface Polish
-- **Configurable folders** — Set default directories for Excel exports (*Approve Batch & Save*) and session saves (*Save Session*), persisted between sessions.
-- **Built-in schema editor** — Edit the Llama extraction prompt directly inside the app, with `"save my ass.txt"` available as a backup reset option.
-- **Light & dark mode** — Toolbar theme toggle with full palette handling and theme-matched modal dialogs.
-- **Toolbar & status bar** — Emoji toolbar actions (`📂` Upload, `📁` Load Session, `💾` Save Session, `⚙️` Preferences, `🌙` Dark, `▶️` Process, `✅` Approve), an always-visible icon legend in the bottom-right status bar, and a custom judgemental cat window icon.
+<!-- TODO: add Python version, e.g. "Python 3.11+" -->
 
-### Safety & Robustness
-- **Startup & pre-flight checks** — Clear error prompts if Ollama is not running or if the schema file is missing.
-- **Crash isolation** — A failure on one invoice will not crash the rest of the batch; failed invoices are tracked in the sidebar and excluded from default export.
-- **Session version check** — Prevents loading incompatible session archives.
-- **Atomic session saves** — Writes session data to a temporary folder before zipping to prevent corruption.
+---
+
+## Usage
+
+1. Click **Upload** and select your invoices (<!-- TODO: supported formats, e.g. PDF, JPG, PNG -->).
+2. Click **Process**.
+3. Open each invoice in the sidebar, check the highlighted values against the image, and fix anything wrong.
+4. Approve invoices one by one.
+5. Click **Approve Batch & Save** to export the Excel workbook.
+
+Sessions can be saved and reloaded later as portable ZIP files.
+
+---
+
+## Excel output
+
+One workbook per batch, with six sheets:
+
+| Sheet | Contents |
+|---|---|
+| All Invoices | One color-coded block per invoice, with details and line items |
+| Items | One row per line item |
+| Details | One row per invoice |
+| Needs Review | Invoices with unresolved flags and the specific cells |
+| Changes | Audit trail of every manual edit (edited cells highlighted green) |
+| Failed / Manual | Crashed or empty extractions, for accountability |
+
+<!-- TODO: add a screenshot of the Excel output, using fake data -->
+
+---
+
+## Testing and results
+
+<!-- TODO: fill with your real numbers. Only write what you measured.
+- How many invoices did you test?
+- How many were deliberately low quality (blurry, skewed, dark)?
+- What share of fields were extracted correctly / flagged / wrong?
+Example format: "Tested on 40 invoices, including 12 degraded scans. 91% of fields were correct without edits, 7% were flagged for review, 2% were wrong and unflagged." -->
+
+### Performance
+
+- About **20 seconds per invoice**, measured on: <!-- TODO: GPU model, RAM, CPU -->
+- Designed to run within **8 GB VRAM**.
+
+---
+
+## Limitations
+
+<!-- TODO: be specific and honest. This section makes the project more credible, not less. Consider:
+- Languages and invoice layouts you have / have not tested
+- Handwritten invoices
+- Very long or multi-page documents
+- What the app does when values cannot be located (it flags them, it does not guess)
+- Is a human reviewer always required? -->
+
+- This tool assists review. It does not replace it: AI extraction can be wrong, which is why every value is shown against the source and unlocated values are flagged.
+
+---
+
+## Privacy and data handling
+
+- All processing runs locally through Ollama. No external API calls, no cloud upload.
+- Session files are stored locally in a self-contained ZIP (review state, schema, annotated images).
+- Session saves are written to a temporary folder first and then zipped, to avoid corrupted files.
+- A version check prevents loading incompatible session archives.
+
+---
+
+<details>
+<summary><b>Full feature list</b></summary>
+
+### Core extraction
+- Three-model pipeline (OCR, structuring, value location)
+- Row-anchored value location that matches each value to the correct invoice row
+- Annotated output image (yellow boxes for details, green for line items)
+- Fuzzy matching that survives OCR typos and formatting variations
+- Numeric cleaning (strips `$`, `,`, `USD`)
+
+### Model lifecycle and VRAM management
+- Automatic model swapping (Llama + Paddle unload before DeepSeek loads, and vice versa)
+- DeepSeek preloads at startup and reloads after each batch, so the next batch starts instantly
+
+### Review interface
+- Zoomable image viewer (mouse wheel zoom, `Ctrl+0` to fit)
+- Editable mini-Excel tables: double-click to edit, add or remove rows and columns
+- Per-invoice review from the sidebar
+- Pink flags for values the AI could not locate; green flags for manual edits
+- Per-invoice undo/redo (`Ctrl+Z` / `Ctrl+Y`) that persists when switching invoices
+- Sidebar status icons: ☐ New, ✏️ Edited, ❓ Empty, ⚠ Failed, ✓ Approved
+- Right-click menu to approve, remove or add invoices
+- Individual approval before export
+
+### Batch workflow
+- Add or remove invoices mid-session without losing existing edits
+- Already-processed files are skipped when you click Process again
+- Blank pages and failed extractions are detected automatically
+- Every invoice gets an editable table even if extraction produced nothing
+
+### Sessions
+- Save / Save As / overwrite save
+- Portable session ZIPs, restored in a fresh launch
+- Timestamped, versioned filenames
+- Optional cleanup prompt on export
+
+### Excel export styling
+- Pink fills for unresolved flags and green fills for edited values preserved
+- Distinct pastel colors per invoice (adjacent invoices always differ)
+- Red headers for flagged invoices, orange headers for empty extractions
+- Borders on all cells, frozen header rows and autofilters on flat sheets
+
+### Preferences and interface
+- Configurable default folders for exports and session saves
+- Built-in schema editor for the Llama extraction prompt, with a backup file (`schema_backup.txt`) to reset it
+- Light and dark mode
+- Animated progress overlay with phase labels, a weighted progress bar and optional audio cues
+
+### Safety and robustness
+- Startup checks with clear errors if Ollama is not running or the schema file is missing
+- Crash isolation: failed invoices are tracked in the sidebar and excluded from the default export
+
+</details>
 
 ---
 
 ## License
 
-This project is licensed under the **MIT License**.
+MIT License.
